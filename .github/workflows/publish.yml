@@ -1,0 +1,94 @@
+# Publishes this n8n community node package to npm on every version tag.
+#
+# From May 1 2026 n8n requires community nodes to be published from GitHub
+# Actions with an npm provenance statement, so anyone can verify that a package
+# was built by this workflow, from this repository, at this commit.
+#
+# ─── ONE-TIME SETUP: OIDC Trusted Publishing ──────────────────────────────────
+#
+# No secret is stored in this repository. Authorise this workflow once on npm:
+#
+#   npmjs.com -> the package -> Settings -> Publish access
+#     -> Trusted Publishers -> Add a publisher -> GitHub Actions
+#        Repository owner: rjsebening
+#        Repository name:  n8n-nodes-chatsuite
+#        Workflow name:    publish.yml
+#        Environment:      (leave blank)
+#
+# The first release of a brand new package name cannot use trusted publishing
+# (the package does not exist yet, so it has no settings page). Publish 0.1.0
+# once from a local machine with `RELEASE_MODE=true npm publish --access public`,
+# then register the trusted publisher and let this workflow take over.
+#
+# ─── RELEASE ──────────────────────────────────────────────────────────────────
+#
+#   npm version <patch|minor|major>   # bumps package.json and creates tag vX.Y.Z
+#   git push --follow-tags            # pushing the tag starts this workflow
+#
+# Never edit the version in package.json by hand: the tag and package.json are
+# compared below and a mismatch fails the release.
+
+name: Publish
+
+on:
+  push:
+    tags:
+      # Digits only, so a stray tag like "vX.Y.Z" or "v1.2.3-wip" starts nothing.
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+
+jobs:
+  publish:
+    name: Publish to npm
+    runs-on: ubuntu-latest
+
+    permissions:
+      # Mints the OIDC token npm exchanges for publish rights and that signs
+      # the provenance attestation.
+      id-token: write
+      # Least privilege: this workflow only reads the tagged commit.
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 'lts/*'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify tag matches package.json version
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag_version="${GITHUB_REF_NAME#v}"
+          pkg_version="$(node -p "require('./package.json').version")"
+          if [ "${tag_version}" != "${pkg_version}" ]; then
+            echo "::error::Tag ${GITHUB_REF_NAME} does not match package.json version ${pkg_version}"
+            exit 1
+          fi
+          echo "Releasing ${pkg_version}"
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Lint (n8n node rules)
+        run: npm run lint:node
+
+      - name: Build
+        run: npm run build
+
+      # Runs after the build: the scan checks the compiled dist/ as well as the sources.
+      - name: Scan community package rules
+        run: npm run lint:scan
+
+      - name: Publish to npm
+        run: npm publish --provenance --access public
+        env:
+          # `prepublishOnly` runs `n8n-node prerelease`, which aborts a plain
+          # `npm publish` unless this is set. Here the tag is the release gate,
+          # so the guard is deliberately lifted.
+          RELEASE_MODE: 'true'

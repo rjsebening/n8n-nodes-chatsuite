@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+# Cancel superseded runs of the same branch or PR, but never a run on a
+# different ref - hence the ref in the group key.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 'lts/*'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      # Also asserts strict mode: an eslint.config.mjs that deviates from the
+      # @n8n/node-cli default costs n8n Cloud eligibility.
+      - name: Lint (n8n node rules)
+        run: npm run lint:node
+
+      - name: Build
+        run: npm run build
+
+      # The rule set n8n runs against published packages. It needs dist/, so it
+      # has to come after the build - it checks the sources and the tarball.
+      - name: Scan community package rules
+        run: npm run lint:scan

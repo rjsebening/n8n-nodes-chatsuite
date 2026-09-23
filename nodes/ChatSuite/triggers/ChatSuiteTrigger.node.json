@@ -1,0 +1,18 @@
+{
+	"node": "n8n-nodes-chatsuite.chatSuiteTrigger",
+	"nodeVersion": "1.0",
+	"codexVersion": "1.0",
+	"categories": ["Communication", "Sales"],
+	"resources": {
+		"credentialDocumentation": [
+			{
+				"url": "https://github.com/rjsebening/n8n-nodes-chatsuite/blob/main/CREDENTIALS.md"
+			}
+		],
+		"primaryDocumentation": [
+			{
+				"url": "https://github.com/rjsebening/n8n-nodes-chatsuite/blob/main/README.md"
+			}
+		]
+	}
+}
