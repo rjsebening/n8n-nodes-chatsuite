@@ -23,6 +23,8 @@ import {
 } from './actions/knowledgeInformation';
 import { knowledgeQaFields, knowledgeQaOperations } from './actions/knowledgeQa';
 import { messageFields, messageOperations } from './actions/message';
+import { operationFields, operationOperations } from './actions/operation';
+import { planFields, planOperations } from './actions/plan';
 import { productFields, productOperations } from './actions/product';
 import { productCategoryFields, productCategoryOperations } from './actions/productCategory';
 import { resourceSelector } from './actions/resource.selector';
@@ -90,6 +92,10 @@ export class ChatSuite implements INodeType {
 			...knowledgeQaFields,
 			...messageOperations,
 			...messageFields,
+			...operationOperations,
+			...operationFields,
+			...planOperations,
+			...planFields,
 			...productOperations,
 			...productFields,
 			...productCategoryOperations,

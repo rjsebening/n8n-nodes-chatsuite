@@ -14,6 +14,8 @@ import { handleKnowledgeDocument } from './knowledgeDocument/knowledgeDocument.a
 import { handleKnowledgeInformation } from './knowledgeInformation/knowledgeInformation.actions';
 import { handleKnowledgeQa } from './knowledgeQa/knowledgeQa.actions';
 import { handleMessage } from './message/message.actions';
+import { handleOperation } from './operation/operation.actions';
+import { handlePlan } from './plan/plan.actions';
 import { handleProduct } from './product/product.actions';
 import { handleProductCategory } from './productCategory/productCategory.actions';
 import { handleTeamMember } from './teamMember/teamMember.actions';
@@ -38,6 +40,8 @@ const handlers: Record<string, ResourceHandler> = {
 	knowledgeInformation: handleKnowledgeInformation,
 	knowledgeQa: handleKnowledgeQa,
 	message: handleMessage,
+	operation: handleOperation,
+	plan: handlePlan,
 	product: handleProduct,
 	productCategory: handleProductCategory,
 	teamMember: handleTeamMember,

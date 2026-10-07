@@ -228,14 +228,10 @@ export const groupFields: INodeProperties[] = [
 		type: 'options',
 		required: true,
 		default: 'on',
-		description: 'Target ticket detection state for the selected groups',
+		description:
+			"Target ticket detection state for the selected groups. Switching on takes a seat of the plan's group limit; at the limit a group is skipped with SUBSCRIPTION_GROUP_LIMIT_REACHED.",
 		displayOptions: { show: { resource: [RESOURCE], operation: ['setTicketDetection'] } },
 		options: [
-			{
-				name: 'Default',
-				value: 'default',
-				description: 'Back to the default: on once a customer is assigned',
-			},
 			{ name: 'Off', value: 'off' },
 			{ name: 'On', value: 'on' },
 		],
@@ -295,7 +291,6 @@ export const groupFields: INodeProperties[] = [
 				default: 'on',
 				description: 'The groups whose ticket detection is currently in this state',
 				options: [
-					{ name: 'Default', value: 'default' },
 					{ name: 'Off', value: 'off' },
 					{ name: 'On', value: 'on' },
 				],

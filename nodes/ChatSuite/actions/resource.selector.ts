@@ -78,6 +78,16 @@ export const resourceSelector: INodeProperties = {
 			description: 'Send WhatsApp messages and read message history',
 		},
 		{
+			name: 'Operation',
+			value: 'operation',
+			description: 'Track and cancel long-running operations such as batch onboardings',
+		},
+		{
+			name: 'Plan',
+			value: 'plan',
+			description: 'Read the plan usage and limits of the tenant',
+		},
+		{
 			name: 'Product',
 			value: 'product',
 			description: 'Manage products',

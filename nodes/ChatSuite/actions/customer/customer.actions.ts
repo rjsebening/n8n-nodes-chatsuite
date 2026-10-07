@@ -14,9 +14,12 @@ import {
 	buildListQuery,
 	cleanBody,
 	getRlRequired,
+	parseJsonParameter,
 	seg,
 	toStringArray,
 } from '../../helpers/params';
+
+const MAX_BATCH_SIZE = 50;
 
 /** Normalizes the shared customer field collection into an API request body */
 function customerBody(fields: IDataObject): IDataObject {
@@ -32,6 +35,94 @@ function customerBody(fields: IDataObject): IDataObject {
 		body.isActive = fields.isActive;
 	}
 	return body;
+}
+
+/** Builds `teamMembers` for the "specific" mode; names and emails may be combined */
+function specificTeamMembers(
+	ctx: IExecuteFunctions,
+	i: number,
+	fields: IDataObject,
+	label: string,
+): IDataObject {
+	const names = toStringArray(fields.teamMemberNames);
+	const emails = toStringArray(fields.teamMemberEmails);
+	if (names.length === 0 && emails.length === 0) {
+		throw new NodeOperationError(
+			ctx.getNode(),
+			`${label}: Team Member Emails or Team Member Names is required when the team member mode is "Specific"`,
+			{ itemIndex: i },
+		);
+	}
+	const teamMembers: IDataObject = { mode: 'specific' };
+	if (names.length) teamMembers.names = names;
+	if (emails.length) teamMembers.emails = emails;
+	return teamMembers;
+}
+
+/** Maps one "Customer" entry of the batch UI to a batch position of the API */
+function batchItemFromUi(
+	ctx: IExecuteFunctions,
+	i: number,
+	entry: IDataObject,
+	position: number,
+): IDataObject {
+	const label = `Customer ${position}`;
+	const item = cleanBody({
+		phone: entry.phone,
+		groupName: entry.groupName,
+		firstName: entry.firstName,
+		lastName: entry.lastName,
+		groupDescription: entry.groupDescription,
+		productId: entry.productId,
+	});
+	if (!item.phone || !item.groupName) {
+		throw new NodeOperationError(ctx.getNode(), `${label}: Phone and Group Name are required`, {
+			itemIndex: i,
+		});
+	}
+	item.useDefaultGroupPicture = entry.useDefaultGroupPicture ?? true;
+	item.inviteBySms = entry.inviteBySms ?? false;
+
+	const teamMemberMode = (entry.teamMemberMode as string) || 'all';
+	if (teamMemberMode === 'specific') {
+		item.teamMembers = specificTeamMembers(ctx, i, entry, label);
+	} else {
+		item.addAllTeamMembers = teamMemberMode === 'all';
+	}
+	return item;
+}
+
+function batchItems(ctx: IExecuteFunctions, i: number): IDataObject[] {
+	const inputMode = ctx.getNodeParameter('batchInputMode', i) as string;
+
+	let items: IDataObject[];
+	if (inputMode === 'json') {
+		const raw = ctx.getNodeParameter('batchCustomersJson', i);
+		const parsed: unknown =
+			typeof raw === 'string' ? parseJsonParameter(ctx, raw, i, 'Customers (JSON)') : raw;
+		if (!Array.isArray(parsed)) {
+			throw new NodeOperationError(ctx.getNode(), 'Customers (JSON) must be a JSON array', {
+				itemIndex: i,
+			});
+		}
+		items = parsed as IDataObject[];
+	} else {
+		const collection = ctx.getNodeParameter('batchCustomers', i, {}) as {
+			customer?: IDataObject[];
+		};
+		items = (collection.customer ?? []).map((entry, index) =>
+			batchItemFromUi(ctx, i, entry, index + 1),
+		);
+	}
+
+	if (items.length === 0 || items.length > MAX_BATCH_SIZE) {
+		throw new NodeOperationError(
+			ctx.getNode(),
+			`A batch needs between 1 and ${MAX_BATCH_SIZE} customers, got ${items.length}`,
+			{ itemIndex: i },
+		);
+	}
+	return items;
 }
 
 export async function handleCustomer(
@@ -110,20 +201,10 @@ export async function handleCustomer(
 			}
 
 			const teamMemberMode = (options.teamMemberMode as string) ?? '';
-			if (teamMemberMode && teamMemberMode !== 'none') {
-				const teamMembers: IDataObject = { mode: teamMemberMode };
-				if (teamMemberMode === 'specific') {
-					const names = toStringArray(options.teamMemberNames);
-					if (names.length === 0) {
-						throw new NodeOperationError(
-							this.getNode(),
-							'Team Member Names is required when the team member mode is "Specific"',
-							{ itemIndex: i },
-						);
-					}
-					teamMembers.names = names;
-				}
-				body.teamMembers = teamMembers;
+			if (teamMemberMode === 'specific') {
+				body.teamMembers = specificTeamMembers(this, i, options, 'Onboarding Options');
+			} else if (teamMemberMode === 'all') {
+				body.teamMembers = { mode: 'all' };
 			}
 
 			return await csRequest<IDataObject>(
@@ -132,6 +213,20 @@ export async function handleCustomer(
 				`/api/v1/customer/${seg(phoneNumber)}/whatsapp-onboarding`,
 				{ body },
 			);
+		}
+
+		case 'batchOnboarding': {
+			const whatsAppChannelId = (this.getNodeParameter('whatsAppChannelId', i) as string).trim();
+			const idempotencyKey = (this.getNodeParameter('idempotencyKey', i) as string).trim();
+			if (!idempotencyKey) {
+				throw new NodeOperationError(this.getNode(), 'Idempotency Key is required', {
+					itemIndex: i,
+				});
+			}
+			return await csRequest<IDataObject>(this, 'POST', '/api/v1/customer-onboarding', {
+				body: { whatsAppChannelId, items: batchItems(this, i) },
+				headers: { 'Idempotency-Key': idempotencyKey },
+			});
 		}
 
 		case 'export': {

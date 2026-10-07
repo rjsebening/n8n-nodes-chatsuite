@@ -111,11 +111,13 @@ export class ChatSuiteTrigger implements INodeType {
 		group: ['trigger'],
 		version: 1,
 		subtitle: '={{$parameter["events"]}}',
-		description: 'Starts a workflow when ChatSuite sends a webhook event (powered by joergsebening.de)',
+		description:
+			'Starts a workflow when ChatSuite sends a webhook event (powered by joergsebening.de)',
 		defaults: {
 			name: 'ChatSuite Trigger',
 			// @ts-expect-error free-form description
-			description: 'Starts a workflow when ChatSuite sends a webhook event (powered by joergsebening.de)',
+			description:
+				'Starts a workflow when ChatSuite sends a webhook event (powered by joergsebening.de)',
 		},
 		credentials: [{ name: 'chatSuiteApi', required: true }],
 		webhooks: [

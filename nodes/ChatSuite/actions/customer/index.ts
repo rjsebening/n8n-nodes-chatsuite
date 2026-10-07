@@ -16,6 +16,13 @@ export const customerOperations: INodeProperties[] = [
 		displayOptions: { show: { resource: [RESOURCE] } },
 		options: [
 			{
+				name: 'Batch Onboarding',
+				value: 'batchOnboarding',
+				description:
+					'Start onboarding up to 50 new customers, each with a new WhatsApp group (runs as an operation)',
+				action: 'Start a customer batch onboarding',
+			},
+			{
 				name: 'Create',
 				value: 'create',
 				description: 'Create a customer',
@@ -89,6 +96,108 @@ const customerLocator = locatorProperty({
 	idPlaceholder: '+4915112345678',
 	description: 'The customer, addressed by phone number',
 });
+
+/** Team member selection for a new WhatsApp group, shared by single and batch onboarding */
+function teamMemberFields(): INodeProperties[] {
+	return [
+		{
+			displayName: 'Team Member Mode',
+			name: 'teamMemberMode',
+			type: 'options',
+			default: 'all',
+			description: 'Which team members to add to the new group',
+			options: [
+				{ name: 'All', value: 'all', description: 'All active team members' },
+				{ name: 'None', value: 'none' },
+				{
+					name: 'Specific',
+					value: 'specific',
+					description: 'Only the team members given by email or name',
+				},
+			],
+		},
+		optionsField(
+			'Team Member Emails',
+			'teamMemberEmails',
+			'getTeamMembers',
+			'Login email addresses of the team members to add, used when the mode is "Specific". Unlike a display name an email is unique.',
+			{ type: 'multiOptions', default: [] },
+		),
+		{
+			displayName: 'Team Member Names',
+			name: 'teamMemberNames',
+			type: 'string',
+			default: '',
+			placeholder: 'Anna Beispiel, Max Muster',
+			description:
+				'Comma-separated exact team member display names, used when the mode is "Specific"',
+		},
+	];
+}
+
+/** Fields of one batch onboarding position */
+function batchCustomerFields(): INodeProperties[] {
+	const fields: INodeProperties[] = [
+		{
+			displayName: 'Phone',
+			name: 'phone',
+			type: 'string',
+			default: '',
+			placeholder: '+4915112345678',
+			description: 'Required. Phone number in international format.',
+		},
+		{
+			displayName: 'Group Name',
+			name: 'groupName',
+			type: 'string',
+			default: '',
+			description: 'Required. The group name as it should appear in WhatsApp.',
+		},
+		{
+			displayName: 'First Name',
+			name: 'firstName',
+			type: 'string',
+			default: '',
+		},
+		{
+			displayName: 'Last Name',
+			name: 'lastName',
+			type: 'string',
+			default: '',
+		},
+		{
+			displayName: 'Group Description',
+			name: 'groupDescription',
+			type: 'string',
+			typeOptions: { rows: 2 },
+			default: '',
+		},
+		{
+			displayName: 'Product ID',
+			name: 'productId',
+			type: 'string',
+			default: '',
+			placeholder: '3fa85f64-5717-4562-b3fc-2c963f66afa6',
+			description: 'ID (UUID) of the product to assign to the customer',
+		},
+		{
+			displayName: 'Use Default Group Picture',
+			name: 'useDefaultGroupPicture',
+			type: 'boolean',
+			default: true,
+			description: 'Whether to set the default group picture on the new group',
+		},
+		{
+			displayName: 'Invite by SMS',
+			name: 'inviteBySms',
+			type: 'boolean',
+			default: false,
+			description: 'Whether to send the customer the group invitation by SMS',
+		},
+		...teamMemberFields(),
+	];
+	return fields.sort((a, b) => a.displayName.localeCompare(b.displayName));
+}
 
 /** Shared writable customer fields, reused by create / update / patch */
 function customerFields(): INodeProperties[] {
@@ -297,27 +406,7 @@ export const customerFieldProperties: INodeProperties[] = [
 		default: {},
 		displayOptions: { show: { resource: [RESOURCE], operation: ['whatsappOnboarding'] } },
 		options: [
-			{
-				displayName: 'Team Member Mode',
-				name: 'teamMemberMode',
-				type: 'options',
-				default: 'all',
-				description: 'Which team members to add to the new group',
-				options: [
-					{ name: 'All', value: 'all' },
-					{ name: 'None', value: 'none' },
-					{ name: 'Specific', value: 'specific' },
-				],
-			},
-			{
-				displayName: 'Team Member Names',
-				name: 'teamMemberNames',
-				type: 'string',
-				default: '',
-				placeholder: 'Anna Beispiel, Max Muster',
-				description:
-					'Comma-separated exact team member display names, used when the mode is "Specific"',
-			},
+			...teamMemberFields(),
 			optionsField(
 				'WhatsApp Connection Name',
 				'whatsAppConnectionName',
@@ -325,6 +414,85 @@ export const customerFieldProperties: INodeProperties[] = [
 				'WhatsApp channel to use; defaults to the first connected channel',
 			),
 		],
+	},
+
+	// --- batchOnboarding ---
+	{
+		displayName: 'WhatsApp Channel ID',
+		name: 'whatsAppChannelId',
+		type: 'string',
+		required: true,
+		default: '',
+		placeholder: '3fa85f64-5717-4562-b3fc-2c963f66afa6',
+		description:
+			'ID (UUID) of the company channel that creates every group of this batch. A number may create 20 groups per rolling 24 hours, so large batches span several days.',
+		displayOptions: { show: { resource: [RESOURCE], operation: ['batchOnboarding'] } },
+	},
+	{
+		displayName: 'Idempotency Key',
+		name: 'idempotencyKey',
+		type: 'string',
+		required: true,
+		default: '={{ $execution.id }}-{{ $itemIndex }}',
+		description:
+			'A retry with the same key returns the same operation instead of starting it twice; the same key with a different batch is rejected. Keys stay reserved for 30 days after the operation ended.',
+		displayOptions: { show: { resource: [RESOURCE], operation: ['batchOnboarding'] } },
+	},
+	{
+		displayName: 'Input Mode',
+		name: 'batchInputMode',
+		type: 'options',
+		noDataExpression: true,
+		default: 'defineBelow',
+		displayOptions: { show: { resource: [RESOURCE], operation: ['batchOnboarding'] } },
+		options: [
+			{
+				name: 'Define Below',
+				value: 'defineBelow',
+				description: 'Enter the customers one by one',
+			},
+			{
+				name: 'JSON',
+				value: 'json',
+				description: 'Pass the customers as a JSON array, for example mapped from earlier nodes',
+			},
+		],
+	},
+	{
+		displayName: 'Customers',
+		name: 'batchCustomers',
+		type: 'fixedCollection',
+		typeOptions: { multipleValues: true },
+		placeholder: 'Add Customer',
+		default: {},
+		description: 'Up to 50 customers; each one gets a new WhatsApp group',
+		displayOptions: {
+			show: {
+				resource: [RESOURCE],
+				operation: ['batchOnboarding'],
+				batchInputMode: ['defineBelow'],
+			},
+		},
+		options: [
+			{
+				displayName: 'Customer',
+				name: 'customer',
+				values: batchCustomerFields(),
+			},
+		],
+	},
+	{
+		displayName: 'Customers (JSON)',
+		name: 'batchCustomersJson',
+		type: 'json',
+		required: true,
+		default:
+			'[\n  {\n    "phone": "+4915112345678",\n    "firstName": "Max",\n    "lastName": "Mustermann",\n    "groupName": "Max Mustermann - Coaching"\n  }\n]',
+		description:
+			'Array of up to 50 positions with phone, groupName, firstName, lastName, groupDescription, productId, useDefaultGroupPicture, addAllTeamMembers, teamMembers and inviteBySms',
+		displayOptions: {
+			show: { resource: [RESOURCE], operation: ['batchOnboarding'], batchInputMode: ['json'] },
+		},
 	},
 
 	// --- import / export ---

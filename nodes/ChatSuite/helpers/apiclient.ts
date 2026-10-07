@@ -7,6 +7,7 @@ import type {
 	ILoadOptionsFunctions,
 	IWebhookFunctions,
 } from 'n8n-workflow';
+import { NodeApiError } from 'n8n-workflow';
 
 export const CREDENTIALS_NAME = 'chatSuiteApi';
 
@@ -117,6 +118,39 @@ async function buildOptions(
 	return options;
 }
 
+/**
+ * The API reports machine-readable details (`errorCode`, `errorArgs` such as
+ * the usages behind PRODUCT_IN_USE, or the `planLimit` of a 409) next to the
+ * message. n8n only shows the message, so append the details to the description.
+ */
+function withErrorDetails(error: unknown): unknown {
+	if (!(error instanceof NodeApiError)) return error;
+	const data = error.context?.data as IDataObject | undefined;
+	if (!data || typeof data !== 'object') return error;
+
+	const details: string[] = [];
+	if (data.errorCode) details.push(`Error code: ${String(data.errorCode)}`);
+	if (data.errorArgs && Object.keys(data.errorArgs).length) {
+		details.push(`Details: ${JSON.stringify(data.errorArgs)}`);
+	}
+	if (data.planLimit) details.push(`Plan limit: ${JSON.stringify(data.planLimit)}`);
+	if (!details.length) return error;
+
+	error.description = [error.description, ...details].filter(Boolean).join('\n');
+	return error;
+}
+
+async function sendWithAuthentication(
+	ctx: ApiContext & { helpers: { httpRequestWithAuthentication: RequestWithAuthentication } },
+	options: IHttpRequestOptions,
+): Promise<unknown> {
+	try {
+		return await ctx.helpers.httpRequestWithAuthentication.call(ctx, CREDENTIALS_NAME, options);
+	} catch (error) {
+		throw withErrorDetails(error);
+	}
+}
+
 export async function csRequest<T = unknown>(
 	ctx: ApiContext,
 	method: IHttpRequestMethods,
@@ -129,11 +163,7 @@ export async function csRequest<T = unknown>(
 		throw new Error('No HTTP helper available');
 	}
 
-	return (await ctx.helpers.httpRequestWithAuthentication.call(
-		ctx,
-		CREDENTIALS_NAME,
-		options,
-	)) as T;
+	return (await sendWithAuthentication(ctx, options)) as T;
 }
 
 /** Raw binary download - returns the body buffer plus the response headers */
@@ -150,11 +180,10 @@ export async function csRequestBinary(
 		throw new Error('No HTTP helper available');
 	}
 
-	const response = (await ctx.helpers.httpRequestWithAuthentication.call(
-		ctx,
-		CREDENTIALS_NAME,
-		options,
-	)) as { body: ArrayBuffer | Buffer; headers?: IDataObject };
+	const response = (await sendWithAuthentication(ctx, options)) as {
+		body: ArrayBuffer | Buffer;
+		headers?: IDataObject;
+	};
 
 	if (response.body === undefined || response.body === null) {
 		throw new Error(`The ChatSuite API returned no file content for ${path}`);
@@ -184,11 +213,7 @@ export async function csRequestMultipart<T = unknown>(
 		throw new Error('No HTTP helper available');
 	}
 
-	const result = await ctx.helpers.httpRequestWithAuthentication.call(
-		ctx,
-		CREDENTIALS_NAME,
-		options,
-	);
+	const result = await sendWithAuthentication(ctx, options);
 
 	// The API answers multipart uploads with JSON, but without `json: true` it
 	// arrives as a string - parse it back so handlers always see an object.

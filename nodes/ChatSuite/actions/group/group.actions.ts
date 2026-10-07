@@ -118,10 +118,7 @@ export async function handleGroup(
 				);
 			}
 
-			const body: IDataObject = {
-				// `default` is expressed as an explicit null in the API contract
-				enabled: enabledChoice === 'default' ? null : enabledChoice === 'on',
-			};
+			const body: IDataObject = { enabled: enabledChoice === 'on' };
 			if (kanalName) body.kanalName = kanalName;
 			if (groups.length) body.groups = groups;
 			if (Object.keys(where).length) body.where = where;

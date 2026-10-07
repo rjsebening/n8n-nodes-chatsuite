@@ -146,8 +146,11 @@ export async function getCustomerWhatsappGroups(
 	);
 	const groups = (customer?.whatsAppGroups as IDataObject[]) ?? [];
 
-	return toOptions(groups, ['groupName', 'whatsAppGroupName', 'name'], ['whatsAppGroupId', 'id'], (row) =>
-		row.isPrimary === true ? 'Primary group' : undefined,
+	return toOptions(
+		groups,
+		['groupName', 'whatsAppGroupName', 'name'],
+		['whatsAppGroupId', 'id'],
+		(row) => (row.isPrimary === true ? 'Primary group' : undefined),
 	);
 }
 
