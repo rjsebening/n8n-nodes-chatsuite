@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-chatsuite",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "Connect n8n with the ChatSuite Tenant API - customers, tickets, knowledge base, WhatsApp messaging and webhooks",
   "type": "commonjs",
   "keywords": [
