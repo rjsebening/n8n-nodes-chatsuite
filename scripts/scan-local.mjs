@@ -54,13 +54,26 @@ function installedScannerVersion() {
 }
 
 if (!existsSync(scannerEntry) || installedScannerVersion() !== pinnedVersion) {
-	console.log(`Installing @n8n/scan-community-package@${pinnedVersion} into scripts/.scan-tools ...`);
+	console.log(
+		`Installing @n8n/scan-community-package@${pinnedVersion} into scripts/.scan-tools ...`,
+	);
 	execFileSync('mkdir', ['-p', toolsDir]);
-	writeFileSync(path.join(toolsDir, 'package.json'), `${JSON.stringify(TOOLS_MANIFEST, null, 2)}\n`);
-	execFileSync('npm', ['install', '--silent', '--no-audit', '--no-fund'], {
-		cwd: toolsDir,
-		stdio: 'inherit',
-	});
+	writeFileSync(
+		path.join(toolsDir, 'package.json'),
+		`${JSON.stringify(TOOLS_MANIFEST, null, 2)}\n`,
+	);
+	// --ignore-scripts: the scanner pulls in isolated-vm (via n8n-workflow) without ever loading
+	// it. Its prebuilds only cover Node 22/24, so on newer Node the install script falls back to
+	// node-gyp and fails the whole install. Skipping scripts also keeps third-party install hooks
+	// out of a pure lint tool.
+	execFileSync(
+		'npm',
+		['install', '--ignore-scripts', '--loglevel=error', '--no-audit', '--no-fund'],
+		{
+			cwd: toolsDir,
+			stdio: 'inherit',
+		},
+	);
 }
 
 const actualVersion = installedScannerVersion();
