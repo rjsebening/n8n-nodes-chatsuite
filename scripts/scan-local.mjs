@@ -34,14 +34,15 @@ const TOOLS_MANIFEST = {
 	private: true,
 	description: 'Isolated install of the n8n community-package scanner. Not part of the package.',
 	dependencies: {
-		'@n8n/scan-community-package': '0.38.0',
+		'@n8n/scan-community-package': '0.43.0',
 		// Pinned so it hoists ahead of the scanner's own typescript@7.0.2, which the parser rejects.
 		typescript: '6.0.3',
 	},
 };
 
 const scannerDir = path.join(toolsDir, 'node_modules/@n8n/scan-community-package');
-const scannerEntry = path.join(scannerDir, 'scanner/scanner.mjs');
+// Since 0.43 the scanner ships compiled TypeScript under dist/ (before: scanner/scanner.mjs)
+const scannerEntry = path.join(scannerDir, 'dist/scanner.js');
 const pinnedVersion = TOOLS_MANIFEST.dependencies['@n8n/scan-community-package'];
 
 function installedScannerVersion() {

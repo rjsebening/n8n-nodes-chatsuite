@@ -100,7 +100,7 @@ export const resourceSelector: INodeProperties = {
 		{
 			name: 'Team Member',
 			value: 'teamMember',
-			description: 'Manage team members and their absences',
+			description: 'Manage team members',
 		},
 		{
 			name: 'Ticket',

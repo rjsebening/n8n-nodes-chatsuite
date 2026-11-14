@@ -5,6 +5,13 @@ import { locatorProperty, optionsField, stringProperty } from '../shared/locator
 
 const RESOURCE = 'teamMember';
 
+/**
+ * The absence endpoints are no longer part of the ChatSuite Tenant API. Their
+ * operations stay implemented but hidden; set this to true to offer them again.
+ */
+const ABSENCES_AVAILABLE = false;
+const ABSENCE_OPERATIONS = ['getAbsences', 'createAbsence', 'updateAbsence', 'deleteAbsence'];
+
 export const teamMemberOperations: INodeProperties[] = [
 	{
 		displayName: 'Operation',
@@ -80,7 +87,7 @@ export const teamMemberOperations: INodeProperties[] = [
 				description: 'Update only the given team member fields (PATCH)',
 				action: 'Update a team member partially',
 			},
-		],
+		].filter((option) => ABSENCES_AVAILABLE || !ABSENCE_OPERATIONS.includes(option.value)),
 	},
 ];
 

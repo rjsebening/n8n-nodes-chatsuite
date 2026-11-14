@@ -144,7 +144,7 @@ function batchCustomerFields(): INodeProperties[] {
 			type: 'string',
 			default: '',
 			placeholder: '+4915112345678',
-			description: 'Required. Phone number in international format.',
+			description: 'Required. Phone number in international format with a + or 00 prefix.',
 		},
 		{
 			displayName: 'Group Name',
@@ -200,7 +200,7 @@ function batchCustomerFields(): INodeProperties[] {
 }
 
 /** Shared writable customer fields, reused by create / update / patch */
-function customerFields(): INodeProperties[] {
+function customerFields(mode: 'create' | 'update'): INodeProperties[] {
 	const fields: INodeProperties[] = [
 		{
 			displayName: 'Company Name',
@@ -266,7 +266,35 @@ function customerFields(): INodeProperties[] {
 			'getWhatsappChannels',
 			'WhatsApp channel to assign to the customer',
 		),
+		{
+			displayName: 'Time Zone',
+			name: 'timeZoneId',
+			type: 'string',
+			default: '',
+			placeholder: 'Europe/Berlin',
+			description:
+				'IANA time zone of the customer. Without it the customer uses the time zone of the tenant.',
+		},
 	];
+	if (mode === 'create') {
+		fields.push({
+			displayName: 'Is New Client',
+			name: 'isNewClient',
+			type: 'boolean',
+			default: false,
+			description:
+				'Whether to mark the customer as new. Their first WhatsApp group join then reports customer.isNewClient = true to the automation trigger "Kunde tritt Gruppe bei" and sends the customer.onboarded webhook once.',
+		});
+	} else {
+		fields.push({
+			displayName: 'Use Tenant Time Zone',
+			name: 'useTenantTimeZone',
+			type: 'boolean',
+			default: false,
+			description:
+				'Whether to drop the time zone of the customer so it inherits the time zone of the tenant again. Overrides Time Zone.',
+		});
+	}
 	return fields.sort((a, b) => a.displayName.localeCompare(b.displayName));
 }
 
@@ -329,7 +357,7 @@ export const customerFieldProperties: INodeProperties[] = [
 		'newPhoneNumber',
 		RESOURCE,
 		['create'],
-		'Tenant-facing customer key; must be unique after phone normalization',
+		'Tenant-facing customer key in international format with a + or 00 prefix; must be unique after phone normalization',
 		{ placeholder: '+4915112345678' },
 	),
 	{
@@ -339,7 +367,7 @@ export const customerFieldProperties: INodeProperties[] = [
 		placeholder: 'Add Field',
 		default: {},
 		displayOptions: { show: { resource: [RESOURCE], operation: ['create'] } },
-		options: customerFields(),
+		options: customerFields('create'),
 	},
 
 	// --- update (PUT) ---
@@ -348,7 +376,9 @@ export const customerFieldProperties: INodeProperties[] = [
 		name: 'newPhoneNumber',
 		type: 'string',
 		default: '',
-		description: 'New tenant-facing customer key. Leave empty to keep the current phone number.',
+		placeholder: '+4915112345678',
+		description:
+			'New tenant-facing customer key with a + or 00 prefix. Leave empty to keep the current phone number.',
 		displayOptions: { show: { resource: [RESOURCE], operation: ['update'] } },
 	},
 	{
@@ -358,14 +388,15 @@ export const customerFieldProperties: INodeProperties[] = [
 		placeholder: 'Add Field',
 		default: {},
 		displayOptions: { show: { resource: [RESOURCE], operation: ['update', 'patch'] } },
-		options: customerFields(),
+		options: customerFields('update'),
 	},
 	{
 		displayName: 'New Phone Number',
 		name: 'patchPhoneNumber',
 		type: 'string',
 		default: '',
-		description: 'New phone number. Leave empty to keep the current one.',
+		placeholder: '+4915112345678',
+		description: 'New phone number with a + or 00 prefix. Leave empty to keep the current one.',
 		displayOptions: { show: { resource: [RESOURCE], operation: ['patch'] } },
 	},
 

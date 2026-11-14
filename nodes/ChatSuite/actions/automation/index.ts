@@ -19,7 +19,8 @@ export const automationOperations: INodeProperties[] = [
 			{
 				name: 'Execute',
 				value: 'execute',
-				description: 'Execute an automation manually',
+				description:
+					'Execute an automation with a manual trigger; drafts and paused automations work, archived ones must be restored first',
 				action: 'Execute an automation',
 			},
 			{

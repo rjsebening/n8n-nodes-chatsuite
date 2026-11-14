@@ -97,7 +97,13 @@ export const dataPointValueFields: INodeProperties[] = [
 		required: true,
 	}),
 
-	stringProperty('Value', 'value', RESOURCE, ['write'], 'The value to store, as text'),
+	stringProperty(
+		'Value',
+		'value',
+		RESOURCE,
+		['write'],
+		'The value to store, as text. For numeric data points (Number, Range, Currency) send the canonical form such as 82.5 or 36000; other spellings like 82,5 or 1.234,5 € are normalized, anything that is no number is stored unchanged.',
+	),
 	{
 		displayName: 'Period',
 		name: 'period',

@@ -23,13 +23,13 @@ Follow the [installation guide](https://docs.n8n.io/integrations/community-nodes
 ## Operations
 
 The **ChatSuite** node covers every endpoint of the ChatSuite Tenant API (126 operations across
-20 resources), plus a generic **API Call** resource for endpoints added after this release.
+22 resources), plus a generic **API Call** resource for endpoints added after this release.
 
 | Resource | Operations |
 |---|---|
 | API Call | Request |
 | Automation | Get Many, Get, Execute, Get Many Executions, Get Execution, Get Many Versions |
-| Customer | Get Many, Get, Get by Email, Create, Update, Update Partially, Delete, Export, Import, WhatsApp Onboarding |
+| Customer | Get Many, Get, Get by Email, Create, Update, Update Partially, Delete, Export, Import, WhatsApp Onboarding, Batch Onboarding |
 | Customer Category | Get Many, Get, Create, Update, Update Partially, Delete |
 | Customer Knowledge | Get Many, Get, Create, Update Partially, Delete, Approve, Query |
 | Data Collection | Get Many, Execute |
@@ -41,9 +41,11 @@ The **ChatSuite** node covers every endpoint of the ChatSuite Tenant API (126 op
 | Knowledge Information | Get Many, Get, Create, Update Partially, Delete, Approve, Reprocess, Query |
 | Knowledge Q&A | Get Many, Get, Create, Update Partially, Delete, Approve, Reprocess, Get/Upload/Delete/Download Attachment |
 | Message | Send, Send to Group, Send to Customer Groups, Get, Get Many History Entries |
+| Operation | Get, Cancel |
+| Plan | Get Usage |
 | Product | Get Many, Get, Create, Update, Update Partially, Delete |
 | Product Category | Get Many, Get, Create, Update, Update Partially, Delete |
-| Team Member | Get Many, Get, Create, Update, Update Partially, Delete, Resend Welcome Email, Get Many Absences, Create/Update/Delete Absence |
+| Team Member | Get Many, Get, Create, Update, Update Partially, Delete, Resend Welcome Email |
 | Ticket | Get Many, Get, Create, Update, Get Many States, Get Many History Entries, Get Many Messages, Get Many Notes, Create Note |
 | Ticket Category | Get Many, Get, Create, Update, Delete |
 | Webhook | Get Many, Create, Update, Delete, Test, Get Many Events |

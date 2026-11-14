@@ -30,9 +30,14 @@ function customerBody(fields: IDataObject): IDataObject {
 	if (fields.categoryNames !== undefined) {
 		body.categoryNames = toStringArray(fields.categoryNames);
 	}
-	// `isActive: false` is meaningful and must survive cleanBody
-	if (fields.isActive !== undefined) {
-		body.isActive = fields.isActive;
+	// `isActive: false` and `isNewClient: false` are meaningful and must survive cleanBody
+	for (const key of ['isActive', 'isNewClient']) {
+		if (fields[key] !== undefined) body[key] = fields[key];
+	}
+	// `timeZoneId: null` lets the customer inherit the tenant time zone
+	delete body.useTenantTimeZone;
+	if (fields.useTenantTimeZone === true) {
+		body.timeZoneId = null;
 	}
 	return body;
 }
